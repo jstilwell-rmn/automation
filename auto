@@ -1,0 +1,68 @@
+#!/usr/bin/env node
+const {statSync} = require('fs')
+const path = require('path')
+const {spawn} = require('child_process')
+
+// When executed, this protocol accepts the name of a task definition
+// as the argument. It then proceeds to locate the definition,
+// position it within the execution context, and carry out the task
+// prompting the user for additional information as needed.
+
+function main(subject, predicate, arguments) {
+	try {
+		const path = taskDefinitionPath(subject, predicate)
+		const subprocess = spawn(path, {
+			detached: false
+		})
+	} catch (err) {
+		help(err)
+	}
+}
+
+function taskDefinitionPath(subject, predicate) {
+	let taskPath = path.join(
+		process.env.HOME,
+		'.auto/tasks',
+		subject,
+		predicate
+	)
+
+	if (!isFile(taskPath)) {
+		taskPath = path.join(__dirname, 'tasks', subject, predicate)
+	}
+
+	if (!isFile(taskPath)) {
+		throw `No definition found for "${subject} ${predicate}".`
+	}
+	
+	return taskPath
+}
+
+function isFile(path) {
+	try {
+		return statSync(path).isFile()
+	} catch {}
+	return false
+}
+
+function isDirectory(path) {
+	try {
+		return statSync(path).isDirectory()
+	} catch {}
+	return false
+}
+
+function help(message) {
+	console.log(`Usage: ${path.basename(process.argv[1])}`)
+	console.log(`\n  ${message}`)
+	console.log()
+}
+
+const subject = process.argv[2]
+const predicate = process.argv[3]
+
+if (subject && predicate) {
+	main(subject, predicate, process.argv.slice(4))
+} else {
+	help('Subject and predicate must be specified.')	
+}
